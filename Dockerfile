@@ -1,0 +1,17 @@
+FROM rust:1.67 as builder
+WORKDIR /usr/src/docker-rust
+COPY Cargo.toml .
+COPY Cargo.lock .
+
+RUN mkdir src && \
+    echo 'fn main() {\nprintln!("Hello, world!");\n}' > src/main.rs && \
+    cargo build && \
+    cargo clean --package $(awk '/name/ {gsub(/"/,""); print $3}' Cargo.toml | sed ':a;N;$!ba;s/\n//g' | tr -d '\r') && \
+    rm -rf src
+
+COPY src src
+RUN cargo install --path .
+
+FROM debian:bullseye-slim
+COPY --from=builder /usr/local/cargo/bin/docker-rust /usr/local/bin/docker-rust
+CMD ["docker-rust"]
